@@ -1,9 +1,14 @@
 #!/usr/bin/env perl6
 
+# A parser for Pathfinder 1e statblocks as they might
+# appear when cutting-and-pasting from your AP PDFs.
+
 use v6.d;
 
 subset FileName of Str where *.IO.f;
 
+# A class for reading the raw files that can contain
+# multiple NPCs separated by "----"
 class RawFile {
     has $.handle;
 
@@ -29,6 +34,7 @@ class RawFile {
     }
 }
 
+# The parser for the stat block
 grammar StatBlock {
     rule TOP {^ <statblock> $}
     rule statblock {
@@ -81,6 +87,7 @@ grammar StatBlock {
     }
 }
 
+# make text HTML-safe.
 sub html-escape($s is copy) {
     for { '&' => 'amp', '<' => 'lt', '>' => 'gt' }.kv -> $c, $name {
         $s .= subst($c, "\&{$name};", :global);
@@ -88,6 +95,8 @@ sub html-escape($s is copy) {
     $s;
 }
 
+# Take the result of parsing a stat block and return HTML text
+# for it.
 sub output($match) {
     my $sb = $match<statblock>;
     my %parts = $sb.keys.map: { $_ => html-escape($sb{$_}) };
@@ -133,7 +142,10 @@ sub output($match) {
     $html;
 }
 
-sub MAIN(FileName $raw-file) {
+sub MAIN(
+    FileName $raw-file #= The input file (separate NPCs with "----")
+) {
+    #= A converter between a raw text NPC and HTML
     for RawFile.new(:$raw-file).blocks -> $block {
         my $match = StatBlock.parse($block);
         die "Cannot parse block: \n$block\n" unless $match;
